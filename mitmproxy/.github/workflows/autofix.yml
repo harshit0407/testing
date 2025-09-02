@@ -1,0 +1,40 @@
+name: autofix.ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mhils/workflows/checkout@16608e9df5912db0e3ad86a9b90e25e933f2496b
+      - uses: mhils/workflows/setup-uv@16608e9df5912db0e3ad86a9b90e25e933f2496b
+      - uses: mhils/workflows/uv-sync@16608e9df5912db0e3ad86a9b90e25e933f2496b
+
+      - run: ruff check --fix-only .
+      - run: ruff format .
+
+      - run: uv lock
+
+      - run: web/gen/all
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .github/node-version.txt
+      - run: npm ci
+        working-directory: web
+      - run: npm run eslint
+        working-directory: web
+        continue-on-error: true
+      - run: npm run prettier
+        working-directory: web
+
+      - uses: mhils/add-pr-ref-in-changelog@main
+
+      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
